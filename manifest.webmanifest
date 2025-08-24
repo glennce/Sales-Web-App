@@ -1,0 +1,20 @@
+{
+  "name": "Offline Store Sales",
+  "short_name": "SalesApp",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#ff6f61",
+  "icons": [
+    {
+      "src": "salesicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "salesicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
