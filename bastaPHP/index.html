@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline Store Sales</title>
+  <link rel="shortcut icon" href="salesicon.png" type="image/x-icon">
+  <link rel="apple-touch-icon" href="salesicon.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest" type="application/manifest+json">
+</head>
+<body>
+
+  <header>My Store Sales</header>
+
+  <nav>
+    <button class="active" onclick="showPage('home')">🏠 Home</button>
+    <button onclick="showPage('products')">📦 Products</button>
+    <button onclick="showPage('history')">📜 History</button>
+  </nav>
+
+  <div id="home" class="container">
+    <h2>Record Sale</h2>
+    <label for="productSelect">Product</label>
+    <select id="productSelect"></select>
+    <input type="number" id="quantity" placeholder="Quantity">
+    <input type="number" id="price" placeholder="Price">
+    <input type="number" id="cash" placeholder="Cash">
+    <button class="save" onclick="saveSale()">💾 Save Sale</button>
+  </div>
+
+  <div id="products" class="container hidden">
+    <h2>Manage Products</h2>
+    <input type="text" id="newProduct" placeholder="Product Name">
+    <input type="number" id="stock" placeholder="Stock Quantity">
+    <button class="save" onclick="addProduct()">➕ Add / Update Product</button>
+    <h3>Current Products</h3>
+    <div id="productList">No products yet.</div>
+  </div>
+
+  <div id="history" class="container hidden">
+    <h2>Sales History</h2>
+    <div id="sales">No sales yet.</div>
+    <button class="export" onclick="exportCSV()">⬇️ Export CSV</button>
+  </div>
+
+  <script>
+    
+    let products = JSON.parse(localStorage.getItem("products")) || {};
+    let sales = JSON.parse(localStorage.getItem("sales")) || [];
+
+    function showPage(page) {
+      document.querySelectorAll(".container").forEach(c => c.classList.add("hidden"));
+      document.getElementById(page).classList.remove("hidden");
+      document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+      document.querySelector(`nav button[onclick="showPage('${page}')"]`).classList.add("active");
+      if (page === "products") displayProducts();
+      if (page === "history") displaySales();
+      if (page === "home") loadProductOptions();
+    }
+
+    function addProduct() {
+      let name = document.getElementById("newProduct").value;
+      let stock = parseInt(document.getElementById("stock").value) || 0;
+      if (!name) { alert("Enter product name"); return; }
+      products[name] = (products[name] || 0) + stock;
+      localStorage.setItem("products", JSON.stringify(products));
+      displayProducts();
+      document.getElementById("newProduct").value = "";
+      document.getElementById("stock").value = "";
+    }
+
+    function displayProducts() {
+      let list = document.getElementById("productList");
+      if (Object.keys(products).length === 0) {
+        list.innerHTML = "No products yet.";
+        return;
+      }
+      list.innerHTML = "";
+      for (let [name, stock] of Object.entries(products)) {
+        let div = document.createElement("div");
+        div.className = "sale-card";
+        div.innerHTML = `<b>${name}</b><br>Stock: ${stock}`;
+        list.appendChild(div);
+      }
+    }
+
+    function loadProductOptions() {
+      let select = document.getElementById("productSelect");
+      select.innerHTML = "";
+      for (let name in products) {
+        let opt = document.createElement("option");
+        opt.value = name;
+        opt.innerText = name;
+        select.appendChild(opt);
+      }
+    }
+
+    function saveSale() {
+      let product = document.getElementById("productSelect").value;
+      let qty = parseInt(document.getElementById("quantity").value);
+      let price = parseFloat(document.getElementById("price").value);
+      let cash = parseFloat(document.getElementById("cash").value);
+      if (!product || !qty || !price || !cash) { alert("Fill all fields!"); return; }
+      if (products[product] < qty) { alert("Not enough stock!"); return; }
+
+      products[product] -= qty;
+      let total = qty * price;
+      let change = cash - total;
+      let sale = { product, qty, price, total, change, date: new Date().toLocaleString() };
+      sales.push(sale);
+
+      localStorage.setItem("products", JSON.stringify(products));
+      localStorage.setItem("sales", JSON.stringify(sales));
+
+      alert("Sale saved!");
+      document.getElementById("quantity").value = "";
+      document.getElementById("price").value = "";
+      document.getElementById("cash").value = "";
+    }
+
+    function displaySales() {
+      let salesDiv = document.getElementById("sales");
+      if (sales.length === 0) {
+        salesDiv.innerText = "No sales yet.";
+        return;
+      }
+      salesDiv.innerHTML = "";
+      sales.forEach(s => {
+        let div = document.createElement("div");
+        div.className = "sale-card";
+        div.innerHTML = `<b>${s.product}</b> - ${s.qty} pcs × ₱${s.price} = <b>₱${s.total}</b><b> Change: ${s.change}</b><br><small>${s.date}</small>`;
+        salesDiv.appendChild(div);
+      });
+    }
+
+    function exportCSV() {
+      let csv = "Date,Product,Quantity,Price,Total\n";
+      sales.forEach(s => {
+        csv += `"${s.date}","${s.product}",${s.qty},${s.price},${s.total}\n`;
+      });
+      let blob = new Blob([csv], { type: "text/csv" });
+      let url = URL.createObjectURL(blob);
+      let a = document.createElement("a");
+      a.href = url;
+      a.download = "sales_history.csv";
+      a.click();
+    }
+
+    // Initialize
+    loadProductOptions();
+
+
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("service-worker.js")
+        .then(() => console.log("Service Worker registered"))
+        .catch(err => console.error("Service Worker error", err));
+    }
+  </script>
+</body>
+</html>
